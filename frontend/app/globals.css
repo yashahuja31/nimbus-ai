@@ -2,20 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
 
 body {
-  background-color: #0b0f14;
+  background-color: #0a0c10;
   background-image:
-    radial-gradient(circle at 20% 0%, rgba(61, 214, 198, 0.06), transparent 40%),
-    linear-gradient(180deg, #0b0f14 0%, #0b0f14 100%);
-  color: #e6edf3;
+    radial-gradient(circle at 15% -10%, rgba(108, 140, 255, 0.10), transparent 45%),
+    radial-gradient(circle at 85% 0%, rgba(82, 227, 164, 0.05), transparent 40%);
+  color: #eef1f5;
 }
 
 ::selection {
-  background: rgba(61, 214, 198, 0.25);
+  background: rgba(108, 140, 255, 0.28);
 }
 
-.risk-low { color: #3dd6c6; }
-.risk-medium { color: #e0a63d; }
-.risk-high { color: #e0583d; }
+.risk-low { color: #52e3a4; }
+.risk-medium { color: #f0a445; }
+.risk-high { color: #ff6b5e; }
+
+/* Faint engineering grid -- reads as blueprint/schematic, not decoration. */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.glass {
+  background: rgba(20, 23, 29, 0.6);
+  backdrop-filter: blur(10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

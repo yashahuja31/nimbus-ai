@@ -1,17 +1,17 @@
 import clsx from "clsx";
 
 const RISK_STYLES: Record<string, string> = {
-  low: "bg-signal/10 text-signal border-signal/30",
-  medium: "bg-risk/10 text-risk border-risk/30",
-  high: "bg-danger/10 text-danger border-danger/30",
+  low: "bg-mint/10 text-mint border-mint/30",
+  medium: "bg-amber/10 text-amber border-amber/30",
+  high: "bg-coral/10 text-coral border-coral/30",
 };
 
 const STATUS_STYLES: Record<string, string> = {
   proposed: "bg-dim/10 text-dim border-dim/30",
-  approved: "bg-signal/10 text-signal border-signal/30",
-  executing: "bg-risk/10 text-risk border-risk/30",
-  completed: "bg-signal/10 text-signal border-signal/30",
-  failed: "bg-danger/10 text-danger border-danger/30",
+  approved: "bg-pulse/10 text-pulse border-pulse/30",
+  executing: "bg-amber/10 text-amber border-amber/30",
+  completed: "bg-mint/10 text-mint border-mint/30",
+  failed: "bg-coral/10 text-coral border-coral/30",
   rejected: "bg-dim/10 text-dim border-dim/30",
 };
 

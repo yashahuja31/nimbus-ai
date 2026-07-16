@@ -5,8 +5,8 @@ import clsx from "clsx";
 
 const LEVEL_COLOR: Record<string, string> = {
   info: "text-dim",
-  success: "text-signal",
-  error: "text-danger",
+  success: "text-mint",
+  error: "text-coral",
 };
 
 export function ExecutionHistoryTable({ logs }: { logs: ExecutionLog[] }) {

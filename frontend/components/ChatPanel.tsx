@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plan, api } from "@/lib/api";
+import { AnimatePresence, motion } from "framer-motion";
+import { Plan } from "@/lib/api";
+import { useNimbusApi } from "@/lib/useApi";
 import { PlanApprovalCard } from "@/components/PlanApprovalCard";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +13,7 @@ const EXAMPLES = [
 ];
 
 export function ChatPanel() {
+  const api = useNimbusApi();
   const [message, setMessage] = useState("");
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,15 +42,15 @@ export function ChatPanel() {
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Tell Nimbus what to do — e.g. 'Create an S3 bucket for app logs'"
           rows={3}
-          className="w-full rounded-lg border border-line bg-panel p-3 text-sm text-ink placeholder:text-dim focus:outline-none focus:ring-1 focus:ring-signal"
+          className="w-full rounded-lg border border-line bg-panel p-3 text-sm text-ink placeholder:text-dim focus:outline-none focus:ring-1 focus:ring-pulse"
         />
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex gap-2 flex-wrap">
             {EXAMPLES.map((ex) => (
               <button
                 key={ex}
                 onClick={() => setMessage(ex)}
-                className="text-xs text-dim hover:text-signal underline underline-offset-4"
+                className="text-xs text-dim hover:text-pulse underline underline-offset-4"
               >
                 {ex}
               </button>
@@ -57,7 +60,7 @@ export function ChatPanel() {
             {loading ? "Planning…" : "Send"}
           </Button>
         </div>
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && <p className="text-sm text-coral">{error}</p>}
       </div>
 
       <div className="space-y-4">
@@ -67,15 +70,24 @@ export function ChatPanel() {
             nothing runs until you approve it.
           </p>
         )}
-        {plans.map((plan) => (
-          <PlanApprovalCard
-            key={plan.id}
-            plan={plan}
-            onUpdate={(updated) =>
-              setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
-            }
-          />
-        ))}
+        <AnimatePresence initial={false}>
+          {plans.map((plan) => (
+            <motion.div
+              key={plan.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35 }}
+            >
+              <PlanApprovalCard
+                plan={plan}
+                onUpdate={(updated) =>
+                  setPlans((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+                }
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );

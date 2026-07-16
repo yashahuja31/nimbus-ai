@@ -1,4 +1,6 @@
 .env
+.env.local
+frontend/.env.local
 *.db
 __pycache__/
 *.pyc

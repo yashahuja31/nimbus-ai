@@ -2,108 +2,119 @@
 
 Phase 1 MVP: chat with an AI agent about your AWS account, get back a
 reviewable plan (steps + generated Terraform + risk + cost estimate), and
-nothing touches your AWS account until you click **Approve**. This is the
-"month 3" milestone from the original roadmap, built out fully rather than
-stubbed.
+nothing touches your AWS account until you click **Approve**.
+
+Full documentation lives in [`docs/`](docs/):
+
+- [**Architecture**](docs/ARCHITECTURE.md) — system design, request
+  lifecycle, why approval isn't inside the AI graph
+- [**API Reference**](docs/API.md) — every endpoint, request/response
+  shapes, auth
+- [**Deployment**](docs/DEPLOYMENT.md) — recommended platforms and
+  step-by-step instructions to get this live on the internet, plus
+  alternatives if you want more control
+- [**Scaling**](docs/SCALING.md) — what's already built to scale, and the
+  next three things worth doing as usage grows
 
 ## What's actually working here
 
-- **Planner**: a LangGraph graph (`backend/app/agent/graph.py`) that takes a
-  plain-English request, calls Gemini for a structured plan restricted to a
-  fixed catalog of safe operations, generates matching Terraform, and scores
-  risk + estimated monthly cost.
-- **Approval gate**: enforced structurally, not by prompting — the executor
-  only ever runs from `POST /plans/{id}/approve`, a human-initiated request.
+- **Auth via Clerk** — email/password and OAuth (Google/GitHub, or
+  whatever you enable in the Clerk dashboard) are fully handled by Clerk's
+  hosted components; the backend only verifies the session token
+  (`backend/app/security.py`), it never touches a password.
+- **Planner**: a LangGraph graph (`backend/app/agent/graph.py`) that takes
+  a plain-English request, calls Gemini for a structured plan restricted
+  to a fixed catalog of safe operations, generates matching Terraform, and
+  scores risk + estimated monthly cost.
+- **Approval gate**: enforced structurally, not by prompting — the
+  executor only ever runs from `POST /plans/{id}/approve`, a
+  human-initiated request.
 - **Executor**: real boto3 calls for the three Phase-1 operations (create
   S3 bucket, enable versioning, enable encryption), gated behind a
   `DRY_RUN` flag that defaults to `true`.
 - **Async execution**: Celery + Redis run approved steps as background
   tasks and write an audit trail (`ExecutionLog`) that rolls up into a
   verified plan summary.
-- **Frontend**: Next.js/TypeScript/Tailwind chat UI, plan approval cards
-  with a Terraform preview, dashboard, and execution history — all wired to
-  the real API, no mock data.
-- **Auth, Postgres models, Docker Compose, GitHub Actions CI**: all present
-  and functional.
+- **Rate limiting & pagination**: `/chat` (the only endpoint that spends
+  LLM tokens) is rate-limited; `/plans` and `/history` are paginated.
+  Foreign keys used in filters are indexed. Details in
+  [`docs/SCALING.md`](docs/SCALING.md).
+- **Frontend**: Next.js/TypeScript/Tailwind + Clerk, a signature animated
+  pipeline visualization on the landing page, plan-approval cards with a
+  Terraform preview, dashboard, execution history — all wired to the real
+  API, no mock data.
+- **Postgres models, Docker Compose, GitHub Actions CI**: all present and
+  functional.
 
 I built and ran this end-to-end in a sandbox (backend test suite, a full
-signup → login → chat → plan → list flow, and `next build`) before handing
-it to you — see "What I verified" below for exactly what that covered and
-didn't.
+Clerk-token → chat → plan → list flow, and `next build`) before handing it
+to you — see "What I verified" below for exactly what that covered.
 
 ## What's intentionally out of scope for this pass
 
-Your roadmap is a real 12-month, multi-person-team plan — deployment
-automation, diagnostics, cost optimization, security scanning, the
-multi-agent system, Kubernetes, multi-cloud, and enterprise features
-(Phases 2–9) aren't in this codebase yet. The architecture (catalog-driven
-operations, plan/approve/execute, Celery task queue) is built to grow into
-those rather than be rewritten for them — e.g. adding an operation is one
-entry in `agent/tools.py` plus one handler in `executor/`.
-
-**I also can't publish this to real users from where I'm running.** I don't
-have access to your AWS account, a domain, or a hosting provider, and this
-sandbox can't reach them even if I did. What I can do — and did — is get
-you a genuinely working, tested codebase plus the exact steps below to run
-it locally and put it on the internet yourself.
+The original roadmap is a real 12-month, multi-person-team plan —
+deployment automation, diagnostics, cost optimization, security scanning,
+the multi-agent system, Kubernetes, multi-cloud, and enterprise features
+aren't in this codebase yet. The architecture (catalog-driven operations,
+plan/approve/execute, Celery task queue) is built to grow into those
+rather than be rewritten for them — e.g. adding an operation is one entry
+in `agent/tools.py` plus one handler in `executor/`.
 
 ## Running it locally
 
 ```bash
-cp .env.example .env        # fill in GOOGLE_API_KEY at minimum
+cp .env.example .env                          # backend: fill in GOOGLE_API_KEY, CLERK_JWKS_URL, AWS creds
+cp frontend/.env.example frontend/.env.local   # frontend: fill in Clerk publishable/secret keys
 docker compose up --build
 ```
 
 - Frontend: http://localhost:3000
 - Backend docs: http://localhost:8000/docs
 
-Sign up, connect an account (stubbed for Phase 1 — real per-user AWS
-credential storage is a Phase 9 concern), then try the chat page with
-something like *"Create an S3 bucket for app logs."*
+Sign up through Clerk's hosted UI, click "Connect AWS account" on the
+dashboard, then try the chat page with something like *"Create an S3
+bucket for app logs."*
 
 Without a `GOOGLE_API_KEY` the planner will raise a clear error rather than
-fail silently — everything else (auth, dashboard, history) works without it.
+fail silently; without `CLERK_JWKS_URL` set correctly every request will
+401 — everything else (routing, dashboard shell, history) still renders.
 
 ## Deploying it for real users
 
-1. **Frontend** → Vercel (it's already a standard Next.js app: `vercel deploy`).
-2. **Backend + worker + Postgres + Redis** → Render, Railway, or your own
-   AWS ECS/Fargate setup (the Dockerfiles here are the same ones you'd point
-   at any of those).
-3. Set `GOOGLE_API_KEY`, `AWS_*`, and `JWT_SECRET` as real secrets in
-   whichever platform you pick — never commit `.env`.
-4. Flip `DRY_RUN=false` only once you've read through `backend/app/executor`
-   and are comfortable with what it does to a real AWS account.
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full walkthrough —
+short version: Vercel (frontend) + Render (backend + worker) + Neon
+(Postgres) + Upstash (Redis) + Clerk (auth) gets you a live product for
+$0/month on free tiers, or see that doc's alternatives table for AWS
+ECS/Fargate, Fly.io, Railway, or self-hosting.
 
 ## What I verified before handing this over
 
-- Backend: `pytest` passes; a full signup → login → chat (mocked LLM) →
-  plan-list → plan-detail → connect-account flow runs clean against a real
-  SQLite DB; the LangGraph graph compiles and its terraform/cost helpers
-  produce correct output.
-- Frontend: `next build` compiles and type-checks all five routes with no
-  errors.
+- Backend: `pytest` passes; a full Clerk-token-verified `/auth/me` →
+  `/chat` (mocked LLM) → paginated `/plans` → paginated `/history` →
+  `/cloud-accounts` flow runs clean against a real SQLite DB; unauthenticated
+  requests correctly get `401`; the LangGraph graph compiles and its
+  terraform/cost helpers produce correct output.
+- Frontend: `next build` compiles and type-checks all seven routes
+  (including the Clerk middleware and sign-in/sign-up catch-all routes)
+  with no errors.
 - **Not verified** (needs real credentials I don't have here): an actual
-  Gemini API call, an actual AWS API call, and the Celery worker against a
-  live Redis broker. The code paths are written and reviewed, but you
-  should smoke-test them yourself on first run.
+  Clerk instance, an actual Gemini API call, an actual AWS API call, and
+  the Celery worker against a live Redis broker. The code paths are
+  written and reviewed, but smoke-test them yourself on first run — the
+  step-by-step for that is a few messages back in this conversation, or
+  just repeat the flow described in "Running it locally" above.
 
-## One thing worth deciding before you go further
+## Nimbus AI and OptiVault
 
-Phase 4 of this roadmap ("Cost Optimization") is, functionally, what
-**OptiVault** already does — and OptiVault has a further-along backend
-(FastAPI/boto3/Celery/Docker/CI, already mid-deployment to ECS/Fargate).
-I built Nimbus as its own fresh codebase for this pass since that's what
-you asked for, but it's worth deciding deliberately whether Nimbus should
-eventually **absorb OptiVault's cost-optimization work**, stay fully
-separate, or something else — happy to help think that through, or to wire
-OptiVault in as Nimbus's Phase 4 module instead of rebuilding it.
+These are staying separate products by design — Nimbus isn't absorbing
+OptiVault's cost-optimization work.
 
 ## Repo layout
 
 ```
 backend/    FastAPI + Celery + LangGraph agent + boto3 executor
-frontend/   Next.js chat UI, dashboard, history
+frontend/   Next.js chat UI, dashboard, history (Clerk auth)
+docs/       Architecture, API reference, deployment, scaling
 infra/      Reference Terraform module
 .github/    CI workflow
 ```

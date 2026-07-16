@@ -7,9 +7,14 @@ class Settings(BaseSettings):
     # Core
     app_name: str = "Nimbus AI"
     environment: str = "development"
-    jwt_secret: str = "change-me-in-production"
-    jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 60 * 24
+
+    # Auth: Clerk issues and manages sessions entirely (email/password,
+    # Google, GitHub, etc. are all configured in the Clerk dashboard, not
+    # here). The backend's only job is to verify the session token Clerk
+    # hands the frontend. Find these in Clerk Dashboard -> Configure -> API
+    # Keys -> Show JWKS URL / Issuer.
+    clerk_jwks_url: str = ""
+    clerk_issuer: str = ""
 
     # Data
     database_url: str = "postgresql://nimbus:nimbus@postgres:5432/nimbus"
@@ -31,6 +36,22 @@ class Settings(BaseSettings):
     # setup end-to-end -- this is the "never destructive without approval"
     # guardrail made concrete.
     dry_run: bool = True
+
+    # Scaling knobs
+    chat_rate_limit: str = "10/minute"  # per client, on the LLM-calling endpoint
+    default_page_size: int = 50
+    max_page_size: int = 200
+
+    # Comma-separated list of allowed frontend origins in production, e.g.
+    # "https://app.nimbus.ai,https://nimbus.ai". Defaults wide open for
+    # local dev only -- DEPLOYMENT.md walks through tightening this.
+    cors_origins: str = "*"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        if self.cors_origins.strip() == "*":
+            return ["*"]
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 settings = Settings()

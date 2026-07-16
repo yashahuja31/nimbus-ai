@@ -1,10 +1,12 @@
 import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.agent.graph import run_planner
+from app.config import settings
 from app.database import get_db
+from app.rate_limit import limiter
 from app.models import Plan, PlanStep, User
 from app.schemas import ChatRequest, PlanOut
 from app.security import get_current_user
@@ -13,7 +15,8 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 @router.post("", response_model=PlanOut)
-def chat(payload: ChatRequest, db: Session = Depends(get_db),
+@limiter.limit(settings.chat_rate_limit)
+def chat(request: Request, payload: ChatRequest, db: Session = Depends(get_db),
           user: User = Depends(get_current_user)):
     result = run_planner(payload.message)
 

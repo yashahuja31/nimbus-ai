@@ -1,25 +1,15 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr
-
-
-class UserCreate(BaseModel):
-    email: EmailStr
-    password: str
+from pydantic import BaseModel
 
 
 class UserOut(BaseModel):
     id: str
-    email: str
+    email: Optional[str]
 
     class Config:
         from_attributes = True
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
 
 
 class ChatRequest(BaseModel):

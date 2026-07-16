@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.celery_app import celery_app
+from app.config import settings
 from app.database import get_db
 from app.models import Plan, PlanStatus, User
 from app.schemas import PlanOut
@@ -18,9 +19,20 @@ def _get_owned_plan(plan_id: str, db: Session, user: User) -> Plan:
 
 
 @router.get("", response_model=list[PlanOut])
-def list_plans(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return (db.query(Plan).filter(Plan.owner_id == user.id)
-            .order_by(Plan.created_at.desc()).all())
+def list_plans(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(settings.default_page_size, ge=1, le=settings.max_page_size),
+):
+    return (
+        db.query(Plan)
+        .filter(Plan.owner_id == user.id)
+        .order_by(Plan.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
 
 
 @router.get("/{plan_id}", response_model=PlanOut)

@@ -29,7 +29,7 @@ def _jwks_client() -> PyJWKClient:
 
 def _decode_clerk_token(token: str) -> dict:
     try:
-        signing_key = _jwks_client().signing_key_from_jwt(token)
+        signing_key = _jwks_client().get_signing_key_from_jwt(token)
         options = {"verify_aud": False}  # Clerk session tokens don't set aud
         kwargs = {"issuer": settings.clerk_issuer} if settings.clerk_issuer else {}
         return jwt.decode(token, signing_key.key, algorithms=["RS256"], options=options, **kwargs)

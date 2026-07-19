@@ -28,6 +28,14 @@ export type ExecutionLog = {
   created_at: string;
 };
 
+export type CloudAccount = {
+  id: string;
+  provider: string;
+  label: string;
+  region: string;
+  connected: boolean;
+};
+
 type TokenGetter = () => Promise<string | null>;
 
 /**
@@ -49,6 +57,7 @@ export function createNimbusApi(getToken: TokenGetter) {
       const body = await res.text();
       throw new Error(`${res.status}: ${body}`);
     }
+    if (res.status === 204) return undefined as T;
     return res.json() as Promise<T>;
   }
 
@@ -65,12 +74,13 @@ export function createNimbusApi(getToken: TokenGetter) {
     listHistory: (limit = 50, offset = 0) =>
       request<ExecutionLog[]>(`/history?limit=${limit}&offset=${offset}`),
 
-    connectAccount: (region: string) =>
-      request("/cloud-accounts", {
+    connectAccount: (region: string, label = "default") =>
+      request<CloudAccount>("/cloud-accounts", {
         method: "POST",
-        body: JSON.stringify({ provider: "aws", label: "default", region }),
+        body: JSON.stringify({ provider: "aws", label, region }),
       }),
-    listAccounts: () => request("/cloud-accounts"),
+    listAccounts: () => request<CloudAccount[]>("/cloud-accounts"),
+    deleteAccount: (id: string) => request<void>(`/cloud-accounts/${id}`, { method: "DELETE" }),
 
     me: () => request<{ id: string; email: string | null }>("/auth/me"),
   };

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -27,3 +27,15 @@ def connect_account(payload: CloudAccountCreate, db: Session = Depends(get_db),
     db.commit()
     db.refresh(account)
     return account
+
+
+@router.delete("/{account_id}", status_code=204)
+def remove_account(account_id: str, db: Session = Depends(get_db),
+                    user: User = Depends(get_current_user)):
+    account = (db.query(CloudAccount)
+               .filter(CloudAccount.id == account_id, CloudAccount.owner_id == user.id)
+               .first())
+    if not account:
+        raise HTTPException(status_code=404, detail="Cloud account not found")
+    db.delete(account)
+    db.commit()

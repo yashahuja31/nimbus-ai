@@ -58,7 +58,12 @@ Everything below is real, working code — not a stub or a mock.
 - **Frontend.** Next.js 14 (App Router) + TypeScript + Tailwind + Clerk,
   with a signature animated pipeline visualization on the landing page,
   plan-approval cards with a Terraform preview, a dashboard, and an
-  execution history page — all wired to the real API.
+  execution history page — all wired to the real API. Also: a `⌘K`
+  command palette, a toast notification system used consistently across
+  every action, live polling so an executing plan's status updates
+  without a manual refresh, a full multi-account page (connect/list/
+  remove), and route-level + root-level error boundaries with a real
+  fallback UI instead of a blank crash.
 - **Postgres models, Docker Compose, GitHub Actions CI** — all present and
   functional. `docker compose up --build` runs the whole stack.
 
@@ -220,6 +225,7 @@ available at `/docs` and `/redoc`. Every endpoint except `/health` requires
 | `GET /history?limit=&offset=` | Yes | Paginated execution log, newest first |
 | `GET /cloud-accounts` | Yes | List connected accounts |
 | `POST /cloud-accounts` | Yes | Body: `{"provider": "aws", "label": "default", "region": "us-east-1"}` |
+| `DELETE /cloud-accounts/{id}` | Yes | Remove a connected account. 204, or 404 if not owned by caller |
 
 **Plan shape:**
 ```json
@@ -261,8 +267,10 @@ backend/
     main.py        FastAPI app, CORS, rate limiter, lifespan
   tests/
 frontend/
-  app/              Next.js routes (landing, sign-in, sign-up, dashboard, chat, history)
-  components/       ChatPanel, PlanApprovalCard, NavBar, PipelineFlow, ui/ primitives
+  app/              Next.js routes (landing, sign-in, sign-up, dashboard, chat, history, accounts)
+                    plus error.tsx / global-error.tsx boundaries
+  components/       ChatPanel, PlanApprovalCard, NavBar, PipelineFlow, CommandPalette,
+                    ToastProvider, ui/ primitives
   lib/              api.ts (client factory), useApi.ts (Clerk-bound hook)
   middleware.ts     Clerk route protection
 docs/               Architecture, API, deployment, and scaling docs (this README consolidates them)
